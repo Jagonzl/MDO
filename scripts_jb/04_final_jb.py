@@ -2,7 +2,8 @@
 
 Para cada semilla: entrena en el train completo con los hiperparámetros elegidos por 03_small_test_jb.py
 (lr, batch, epochs), se queda con la mejor época según F1 macro en dev y evalúa en test.
-Solo se conserva en disco el modelo de la semilla con mejor F1 en dev (el que se sube a HF).
+Solo se conserva en disco la semilla con mejor F1 en dev, en dos versiones: best/ (mejor época en dev,
+la que se evalúa y se sube a HF) y last/ (última época).
 
 Uso:
   python scripts_jb/04_final_jb.py --task mdo --model mrbert_es [--seeds 42 43 44]
@@ -23,6 +24,24 @@ from entrenamiento_jb import a_dataset, entorno, entrenar
 def informe(y_true, y_pred, clases):
     return classification_report(y_true, y_pred, labels=list(range(len(clases))), target_names=clases,
                                  output_dict=True, zero_division=0)
+
+
+ESTADO_ENTRENAMIENTO = ["optimizer.pt", "scheduler.pt", "scaler.pt", "rng_state*.pth", "training_args.bin"]
+
+
+def guardar_best_last(trainer, dir_seed):
+    """best/ = mejor época en dev (cargada por load_best_model_at_end); last/ = última época.
+    Se borran los checkpoints y el estado del optimizador para ocupar solo lo necesario."""
+    ckpts = sorted(dir_seed.glob("checkpoint-*"), key=lambda p: int(p.name.split("-")[1]))
+    trainer.save_model(str(dir_seed / "best"))
+    shutil.rmtree(dir_seed / "last", ignore_errors=True)
+    ckpts[-1].rename(dir_seed / "last")
+    for patron in ESTADO_ENTRENAMIENTO:
+        for f in (dir_seed / "last").glob(patron):
+            f.unlink()
+    for ckpt in ckpts[:-1]:
+        shutil.rmtree(ckpt)
+    (dir_seed / "best" / "training_args.bin").unlink(missing_ok=True)
 
 
 def resumen(valores):
@@ -67,9 +86,7 @@ def main():
             "real": [clases[i] for i in test["labels"]], "pred": [clases[i] for i in y_pred],
         }).to_csv(salida / f"predicciones_test_seed{seed}.csv", index=False)
 
-        trainer.save_model(str(dir_seed / "final"))
-        for ckpt in dir_seed.glob("checkpoint-*"):
-            shutil.rmtree(ckpt)
+        guardar_best_last(trainer, dir_seed)
         print(f"seed={seed}: dev_f1={mejor_dev['dev_f1_macro']:.3f} (e{mejor_dev['epoch']}) "
               f"test_f1={rep['macro avg']['f1-score']:.3f} test_acc={rep['accuracy']:.3f}", flush=True)
 
@@ -81,7 +98,8 @@ def main():
     metricas = {
         "modelo": args.model, "tarea": args.task, "hparams": {k: hp[k] for k in ("lr", "batch", "epochs")},
         "seeds": args.seeds, "seed_guardada": mejor_seed,
-        "ruta_modelo": str(base_modelos / f"seed{mejor_seed}" / "final"),
+        "ruta_modelo": str(base_modelos / f"seed{mejor_seed}" / "best"),
+        "ruta_modelo_last": str(base_modelos / f"seed{mejor_seed}" / "last"),
         "test_f1_macro": resumen([por_semilla[s]["test_f1_macro"] for s in args.seeds]),
         "test_accuracy": resumen([por_semilla[s]["test_accuracy"] for s in args.seeds]),
         "dev_f1_macro": resumen([por_semilla[s]["dev_f1_macro"] for s in args.seeds]),

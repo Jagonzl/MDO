@@ -1,6 +1,6 @@
 #!/bin/bash
-# B??squeda de hiperpar??metros (03_small_test_jb.py) para los 10 pares (tarea, modelo) de common_jb.PARES:
-#   0-4 = mdo ?? {mrbert_es, mrbert, mbert, beto_cased, beto_uncased}; 5-9 = definitud ?? (los mismos).
+# Búsqueda de hiperparámetros (03_small_test_jb.py) para los 10 pares (tarea, modelo) de common_jb.PARES:
+#   0-4 = mdo × {mrbert_es, mrbert, mbert, beto_cased, beto_uncased}; 5-9 = definitud × (los mismos).
 # Uso: sbatch slurm_jb/03_busqueda_jb.sbatch        (o --array=0 para un solo par)
 #SBATCH --job-name=mdo_jb_03
 #SBATCH --partition=gpu_a100,gpu_l40,standard
