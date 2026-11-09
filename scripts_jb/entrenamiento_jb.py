@@ -2,7 +2,7 @@
 
 Cambios respecto al original (el resto es idéntico para poder comparar):
   - sin torch.set_num_threads(6) ni use_cpu=True;
-  - bf16 + TF32 si la GPU lo admite y dataloader_num_workers=4;
+  - bf16 + TF32 si la GPU lo admite; batch de evaluación 128 (no cambia resultados);
   - parámetro `seed` (por defecto SEED) para entrenar con varias semillas.
 """
 import time
@@ -75,7 +75,7 @@ def entrenar(tarea: str, modelo: str, train: pd.DataFrame, dev: pd.DataFrame, lr
         output_dir=str(output_dir),
         learning_rate=lr,
         per_device_train_batch_size=batch,
-        per_device_eval_batch_size=32,
+        per_device_eval_batch_size=128,
         num_train_epochs=epochs,
         warmup_steps=0.1,
         weight_decay=0.01,
@@ -87,7 +87,6 @@ def entrenar(tarea: str, modelo: str, train: pd.DataFrame, dev: pd.DataFrame, lr
         logging_strategy="epoch",
         train_sampling_strategy="group_by_length",
         bf16=BF16,
-        dataloader_num_workers=4 if GPU else 0,
         report_to="none",
         seed=seed,
     )
