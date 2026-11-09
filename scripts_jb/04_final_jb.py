@@ -15,10 +15,10 @@ import shutil
 import statistics
 
 import pandas as pd
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, f1_score
 
 from common_jb import MODELOS, MODELOS_DIR, PARES, RESULTADOS, TAREAS, cargar_split
-from entrenamiento_jb import a_dataset, entorno, entrenar
+from entrenamiento_jb import entorno, entrenar, predecir
 
 
 def informe(y_true, y_pred, clases):
@@ -74,11 +74,15 @@ def main():
         dir_seed = base_modelos / f"seed{seed}"
         trainer, hist, spe = entrenar(args.task, args.model, train, dev, hp["lr"], hp["batch"], hp["epochs"],
                                       dir_seed, guardar=True, seed=seed)
-        pred = trainer.predict(a_dataset(trainer.processing_class, test))
-        y_pred = pred.predictions.argmax(-1)
+        y_pred = predecir(trainer.model, trainer.processing_class, test)
         rep = informe(test["labels"], y_pred, clases)
         mejor_dev = max(hist, key=lambda h: h["dev_f1_macro"])
+        # Control: el F1 de dev recalculado en orden debe coincidir con el del Trainer (modelo best cargado).
+        dev_f1_control = f1_score(dev["labels"], predecir(trainer.model, trainer.processing_class, dev), average="macro")
+        if abs(dev_f1_control - mejor_dev["dev_f1_macro"]) > 0.02:
+            raise RuntimeError(f"F1 dev en orden {dev_f1_control:.4f} != Trainer {mejor_dev['dev_f1_macro']:.4f}")
         por_semilla[seed] = {"dev_mejor_epoch": mejor_dev["epoch"], "dev_f1_macro": mejor_dev["dev_f1_macro"],
+                             "dev_f1_macro_control": dev_f1_control,
                              "test_accuracy": rep["accuracy"], "test_f1_macro": rep["macro avg"]["f1-score"],
                              "seg_por_ejemplo": round(spe, 4), "historial_dev": hist, "test": rep}
         pd.DataFrame({

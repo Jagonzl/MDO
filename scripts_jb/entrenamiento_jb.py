@@ -42,6 +42,18 @@ def a_dataset(tokenizer, df: pd.DataFrame) -> Dataset:
     return Dataset.from_dict(dict(enc))
 
 
+def predecir(model, tokenizer, df: pd.DataFrame, batch: int = 128) -> np.ndarray:
+    """Predicción en el mismo orden que df (trainer.predict puede reordenar los ejemplos)."""
+    model.eval()
+    dispositivo = next(model.parameters()).device
+    preds = []
+    with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16, enabled=BF16):
+        for i in range(0, len(df), batch):
+            enc = tokenizer.pad(tokenizar(tokenizer, df.iloc[i : i + batch]), return_tensors="pt").to(dispositivo)
+            preds.append(model(**enc).logits.float().argmax(-1).cpu())
+    return torch.cat(preds).numpy()
+
+
 def pesos_clase(train: pd.DataFrame, n_clases: int) -> torch.Tensor:
     conteo = np.bincount(train["labels"], minlength=n_clases)
     return torch.tensor(len(train) / (n_clases * conteo), dtype=torch.float)
