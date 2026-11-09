@@ -5,6 +5,7 @@ Cambios respecto al original (el resto es idéntico para poder comparar):
   - bf16 + TF32 si la GPU lo admite; batch de evaluación 128 (no cambia resultados);
   - parámetro `seed` (por defecto SEED) para entrenar con varias semillas.
 """
+import os
 import time
 
 import numpy as np
@@ -25,7 +26,7 @@ from transformers import (
 from common_jb import MODELOS, SEED, TAREAS, tokenizar
 
 GPU = torch.cuda.is_available()
-BF16 = GPU and torch.cuda.is_bf16_supported()
+BF16 = GPU and torch.cuda.is_bf16_supported() and os.environ.get("MDO_JB_BF16", "1") != "0"
 if GPU:
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True

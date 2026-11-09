@@ -36,8 +36,11 @@ def main():
             filas.append(fila)
     df = pd.DataFrame(filas)
     df.to_csv(RESULTADOS / "resumen_jb.csv", index=False)
-    (RESULTADOS / "resumen_jb.md").write_text(df.round(4).to_markdown(index=False), encoding="utf-8")
-    print(df.round(3).to_string(index=False))
+    vista = df.round(4)
+    if "lr" in vista:
+        vista["lr"] = df["lr"].map(lambda v: f"{v:.0e}" if pd.notna(v) else "")
+    (RESULTADOS / "resumen_jb.md").write_text(vista.to_markdown(index=False), encoding="utf-8")
+    print(vista.to_string(index=False))
 
 
 if __name__ == "__main__":
