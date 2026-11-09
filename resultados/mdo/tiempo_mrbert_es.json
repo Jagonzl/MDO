@@ -1,0 +1,14 @@
+{
+  "modelo": "mrbert_es",
+  "tarea": "mdo",
+  "seg_por_ejemplo": 0.3815,
+  "min_busqueda_completa": 111.8,
+  "min_entrenamiento_final_5_epochs": 46.6,
+  "dev_tras_1_epoch": [
+    {
+      "epoch": 1,
+      "dev_f1_macro": 0.9233851674641148,
+      "dev_accuracy": 0.9234972677595629
+    }
+  ]
+}

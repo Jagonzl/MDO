@@ -1,0 +1,6 @@
+modelos/
+githubtoken.txt
+__pycache__/
+checkpoints/
+*.safetensors
+*.bin
