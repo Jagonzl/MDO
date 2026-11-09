@@ -69,7 +69,7 @@ def main():
     salida.mkdir(parents=True, exist_ok=True)
     base_modelos = MODELOS_DIR / args.task / args.model
 
-    por_semilla = {}
+    por_semilla, predicciones = {}, {}
     for seed in args.seeds:
         dir_seed = base_modelos / f"seed{seed}"
         trainer, hist, spe = entrenar(args.task, args.model, train, dev, hp["lr"], hp["batch"], hp["epochs"],
@@ -85,16 +85,18 @@ def main():
                              "dev_f1_macro_control": dev_f1_control,
                              "test_accuracy": rep["accuracy"], "test_f1_macro": rep["macro avg"]["f1-score"],
                              "seg_por_ejemplo": round(spe, 4), "historial_dev": hist, "test": rep}
-        pd.DataFrame({
+        predicciones[seed] = pd.DataFrame({
             "Texto oración": test["Texto oración"], "Verbo": test["Verbo"], "Objeto": test["Objeto"],
             "real": [clases[i] for i in test["labels"]], "pred": [clases[i] for i in y_pred],
-        }).to_csv(salida / f"predicciones_test_seed{seed}.csv", index=False)
+        })
 
         guardar_best_last(trainer, dir_seed)
         print(f"seed={seed}: dev_f1={mejor_dev['dev_f1_macro']:.3f} (e{mejor_dev['epoch']}) "
               f"test_f1={rep['macro avg']['f1-score']:.3f} test_acc={rep['accuracy']:.3f}", flush=True)
 
     mejor_seed = max(por_semilla, key=lambda s: por_semilla[s]["dev_f1_macro"])
+    # Solo las predicciones del modelo guardado (el que se sube a HF).
+    predicciones[mejor_seed].to_csv(salida / "predicciones_test.csv", index=False)
     for seed in args.seeds:
         if seed != mejor_seed:
             shutil.rmtree(base_modelos / f"seed{seed}", ignore_errors=True)
