@@ -43,16 +43,21 @@ def a_dataset(tokenizer, df: pd.DataFrame) -> Dataset:
     return Dataset.from_dict(dict(enc))
 
 
-def predecir(model, tokenizer, df: pd.DataFrame, batch: int = 128) -> np.ndarray:
-    """Predicción en el mismo orden que df (trainer.predict puede reordenar los ejemplos)."""
+def probabilidades(model, tokenizer, df: pd.DataFrame, batch: int = 128) -> np.ndarray:
+    """Softmax por clase (n_ejemplos × n_clases), en el mismo orden que df."""
     model.eval()
     dispositivo = next(model.parameters()).device
-    preds = []
+    probs = []
     with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16, enabled=BF16):
         for i in range(0, len(df), batch):
             enc = tokenizer.pad(tokenizar(tokenizer, df.iloc[i : i + batch]), return_tensors="pt").to(dispositivo)
-            preds.append(model(**enc).logits.float().argmax(-1).cpu())
-    return torch.cat(preds).numpy()
+            probs.append(model(**enc).logits.float().softmax(-1).cpu())
+    return torch.cat(probs).numpy()
+
+
+def predecir(model, tokenizer, df: pd.DataFrame, batch: int = 128) -> np.ndarray:
+    """Predicción en el mismo orden que df (trainer.predict puede reordenar los ejemplos)."""
+    return probabilidades(model, tokenizer, df, batch).argmax(-1)
 
 
 def pesos_clase(train: pd.DataFrame, n_clases: int) -> torch.Tensor:

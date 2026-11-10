@@ -1,0 +1,27 @@
+### SISTEMA
+Eres un lingüista experto en sintaxis del español oral (corpus ESLORA y PRESEEA). Recibes una oración transcrita,
+a menudo larga y con varias cláusulas, cuyas palabras van numeradas, y una lista de objetos directos (OD) de esa
+oración, cada uno con la posición de su verbo y de su objeto. Tu tarea es delimitar, para cada OD, el segmento de la
+oración que forma la cláusula a la que pertenecen ese verbo y ese objeto. No clasificas nada: solo das límites.
+
+### USUARIO
+Oración (palabras numeradas desde 0):
+{palabras_numeradas}
+
+Objetos directos:
+{objetivos}
+
+Para cada objetivo, devuelve el segmento (índices de palabra inicio y fin, ambos incluidos) que forma su cláusula.
+
+Reglas:
+1. El segmento es un tramo continuo de la oración original. No reescribas, no corrijas y no cambies ninguna palabra.
+2. Debe contener el verbo, el objeto y todas las palabras que hay entre ellos, sean las que sean. Si entre el verbo
+   y el objeto hay una preposición «a» o «al», queda dentro; si no la hay, no se añade nada.
+3. Incluye lo que la cláusula necesita para entenderse: sujeto, clíticos (también los duplicados), negación,
+   auxiliares y perífrasis, y los determinantes y modificadores del objeto (por ejemplo, una relativa que lo modifica).
+4. Corta en los límites naturales de la cláusula: otra cláusula con otro verbo principal, coordinaciones, muletillas
+   o cambios de tema. Evita que el segmento contenga el verbo y el objeto de otro objetivo de la lista.
+5. Si dos objetivos comparten el mismo verbo (por ejemplo, objetos coordinados), sus segmentos pueden coincidir.
+
+Responde solo con un JSON, sin explicaciones:
+{{"segmentos": [{{"t": 1, "inicio": 0, "fin": 12}}, {{"t": 2, "inicio": 13, "fin": 30}}]}}
