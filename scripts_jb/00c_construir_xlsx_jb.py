@@ -30,8 +30,12 @@ def parsear(respuesta: str) -> dict:
         except json.JSONDecodeError:
             continue
         if isinstance(d, dict) and isinstance(d.get("segmentos"), list):
-            return {int(s["t"]): (s["inicio"], s["fin"]) for s in d["segmentos"]
-                    if isinstance(s, dict) and {"t", "inicio", "fin"} <= set(s)}
+            res = {}
+            for s in d["segmentos"]:
+                t = re.sub(r"\D", "", str(s.get("t", ""))) if isinstance(s, dict) else ""
+                if t and {"inicio", "fin"} <= set(s):
+                    res[int(t)] = (s["inicio"], s["fin"])  # Gemma a veces escribe "t": "T1"
+            return res
     return {}
 
 
