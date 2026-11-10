@@ -25,6 +25,7 @@ SEG = ROOT / "dataset" / "segmentacion_jb"
 ORIGINALES = ["Corpus", "ID", "Texto oración", "Verbo", "Objeto", "Animacidad", "Determinante", "Definitud"]
 PIPELINE = ["sent_id", "verbo_id", "objeto_id", "archivo_fuente"]  # claves de los xlsx de PRESEEA/ESLORA
 VENTANA = 10
+DISTANCIA_MAX = 15  # como en 00a: verbo y objeto más lejos que esto = anotación dudosa
 HABER = {"hay", "había", "habia", "hubo", "habrá", "habra", "habría", "habria", "haya", "hubiera", "hubiese", "haber", "habiendo"}
 
 
@@ -75,9 +76,18 @@ def validar(s: dict | None, obj: dict, palabras: list[str]):
     v = s["pos_verbo"] if s.get("pos_verbo") is not None else obj["pos_verbo"]
     o = s["pos_objeto"] if s.get("pos_objeto") is not None else obj["pos_objeto"]
     verbo_ok = s.get("alerta") == "verbo_no_rige" or (0 <= v < n and coincide(palabras[v], obj["verbo"]))
-    if not (0 <= v < n and 0 <= o < n and v != o and verbo_ok and coincide(palabras[o], obj["objeto"])):
-        return None
     i, f = s["inicio"], s["fin"]
+    if not (0 <= v < n and verbo_ok and 0 <= i <= f < n):
+        return None
+    if not (0 <= o < n and coincide(palabras[o], obj["objeto"])):
+        # Gemma a veces señala el inicio del sintagma («un par», «esa casa») y no el núcleo: se acepta la aparición
+        # del objeto dentro del segmento más cercana a la posición que dio.
+        dentro = [j for j in range(i, f + 1) if coincide(palabras[j], obj["objeto"])]
+        if not dentro:
+            return None
+        o = min(dentro, key=lambda j: abs(j - (o if o is not None else v)))
+    if v == o:
+        return None
     return (i, f, v, o) if 0 <= i <= min(v, o) and max(v, o) <= f < n else None
 
 
@@ -120,13 +130,16 @@ def main():
             v, ob = (e[2], e[3]) if e else (o["pos_verbo"], o["pos_objeto"])
             if v >= 0 and ob >= 0:
                 tramos[o["t"]] = (min(v, ob), max(v, ob), v, ob)
-        respaldo = regla({t: x[:2] for t, x in tramos.items()}, len(palabras))
+        # verbo muy lejos del objeto (anotación dudosa): la regla de respaldo se centra solo en el objeto
+        lejos = {t for t, x in tramos.items() if x[1] - x[0] > DISTANCIA_MAX}
+        respaldo = regla({t: ((x[3], x[3]) if t in lejos else x[:2]) for t, x in tramos.items()}, len(palabras))
         for o in objetivos:
             i, t = o["fila"], o["t"]
             if elegidos[t]:
                 ini, fin, v, ob = elegidos[t]; metodo = "gemma"
             elif t in tramos:
-                (ini, fin), (_, _, v, ob) = respaldo[t], tramos[t]; metodo = "regla"
+                (ini, fin), (_, _, v, ob) = respaldo[t], tramos[t]
+                metodo = "regla (centrada en el objeto)" if t in lejos else "regla"
             else:
                 ini, fin, v, ob = 0, len(palabras) - 1, -1, -1; metodo = "sin segmentar (verbo/objeto no encontrados)"
             otros = [u for u, x in tramos.items() if u != t and x[2] != v and ini <= x[0] and x[1] <= fin]
