@@ -45,9 +45,11 @@ def main():
     ap.add_argument("--chat-kwargs", default='{"enable_thinking": false}')
     ap.add_argument("--max-tokens", type=int, default=1024)
     ap.add_argument("--max-model-len", type=int, default=8192)  # 16384 no cabe en A100 80 GB; el prompt más largo ~3k tokens
+    ap.add_argument("--dir", type=Path, default=SEG, help="carpeta con tareas.jsonl (p. ej. dataset/segmentacion_jb/preseea)")
     a = ap.parse_args()
+    seg = a.dir if a.dir.is_absolute() else ROOT / a.dir
 
-    tareas = [json.loads(l) for l in (SEG / "tareas.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
+    tareas = [json.loads(l) for l in (seg / "tareas.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
     sistema, plantilla = leer_prompt(a.prompt)
     conv = [[{"role": "system", "content": sistema}, {"role": "user", "content": mensaje_usuario(plantilla, t)}]
             for t in tareas]
@@ -59,7 +61,7 @@ def main():
     sp = SamplingParams(temperature=0.0, max_tokens=a.max_tokens, seed=42)
     outs = llm.chat(conv, sp, chat_template_kwargs=json.loads(a.chat_kwargs))
 
-    destino = SEG / f"respuestas_{a.tag}.jsonl"
+    destino = seg / f"respuestas_{a.tag}.jsonl"
     with open(destino, "w", encoding="utf-8") as fh:
         for t, c, o in zip(tareas, conv, outs):
             fh.write(json.dumps({"oracion_id": t["oracion_id"], "modelo": a.modelo, "prompt": a.prompt,

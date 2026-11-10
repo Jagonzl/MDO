@@ -6,13 +6,22 @@ objeto:
   - si varias filas comparten el verbo, van en orden de aparición en la oración (orden de fila dentro de cada archivo);
   - entre las asignaciones posibles se elige la que deja cada objeto más cerca de su verbo (preferentemente detrás).
 
-Salida: dataset/segmentacion_jb/tareas.jsonl (una línea por oración) y filas.csv (todas las filas, con su posición).
+Corpus:
+  entrenamiento  los dos xlsx de dataset/raw; una oración con varios objetos = misma oración en varias filas.
+  preseea|eslora hoja 'objetos' de los xlsx de --entrada (salida del pipeline: sent_id, texto_oracion, verbo, objeto,
+                 verbo_id, objeto_id), filas únicas por (sent_id, verbo_id, objeto_id); varios objetos = mismo sent_id.
+                 El orden de aparición sale de verbo_id/objeto_id (ids UD).
+
+Salida: <salida>/tareas.jsonl (una línea por oración) y filas.csv (todas las filas, con su posición).
 Uso: python scripts_jb/00a_preparar_segmentos_jb.py
+     python scripts_jb/00a_preparar_segmentos_jb.py --corpus preseea --entrada <dir xlsx> --salida dataset/segmentacion_jb/preseea
 """
+import argparse
 import importlib.util
 import itertools
 import json
 import re
+from pathlib import Path
 
 import pandas as pd
 
@@ -43,6 +52,29 @@ def cargar_raw() -> pd.DataFrame:
         partes.append(df)
     df = pd.concat(partes, ignore_index=True)
     df["texto_norm"] = df["Texto oración"].map(normalizar)
+    df["grupo"] = df["texto_norm"]
+    return df
+
+
+CLAVE_PIPELINE = ["sent_id", "verbo_id", "objeto_id"]
+
+
+def cargar_pipeline(entrada: Path, corpus: str) -> pd.DataFrame:
+    """Hoja 'objetos' de los xlsx del pipeline, con los nombres de columna del dataset de entrenamiento."""
+    partes = []
+    for f in sorted(p for p in entrada.glob("*.xlsx") if not p.name.startswith("~$")):
+        d = pd.read_excel(f, sheet_name="objetos")
+        d["archivo_fuente"] = f.name
+        partes.append(d)
+    d = pd.concat(partes, ignore_index=True).drop_duplicates(subset=CLAVE_PIPELINE).reset_index(drop=True)
+    df = pd.DataFrame({"Corpus": corpus.upper(), "ID": d["sent_id"], "Texto oración": d["texto_oracion"],
+                       "Verbo": d["verbo"], "Objeto": d["objeto"], "sent_id": d["sent_id"], "verbo_id": d["verbo_id"],
+                       "objeto_id": d["objeto_id"], "archivo_fuente": d["archivo_fuente"], "clase_mdo": ""})
+    # asignar() ordena por (archivo, fila_excel): aquí el orden de aparición lo dan los ids UD dentro de cada oración
+    df["archivo"] = corpus
+    df["fila_excel"] = df["verbo_id"].astype(int) * 10000 + df["objeto_id"].astype(int)
+    df["texto_norm"] = df["Texto oración"].map(normalizar)
+    df["grupo"] = df["sent_id"]
     return df
 
 
@@ -105,15 +137,20 @@ def asignar(grupo: pd.DataFrame, palabras: list[str]) -> dict:
 
 
 def main():
-    SALIDA.mkdir(parents=True, exist_ok=True)
-    df = cargar_raw()
-    n_por_texto = df.groupby("texto_norm")["texto_norm"].transform("size")
-    df["multi"] = n_por_texto > 1
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--corpus", choices=["entrenamiento", "preseea", "eslora"], default="entrenamiento")
+    ap.add_argument("--entrada", type=Path, help="carpeta con los xlsx del pipeline (preseea/eslora)")
+    ap.add_argument("--salida", type=Path, default=SALIDA)
+    args = ap.parse_args()
+    salida = args.salida if args.salida.is_absolute() else ROOT / args.salida
+    salida.mkdir(parents=True, exist_ok=True)
+    df = cargar_raw() if args.corpus == "entrenamiento" else cargar_pipeline(args.entrada, args.corpus)
+    df["multi"] = df.groupby("grupo")["grupo"].transform("size") > 1
     df["pos_verbo"], df["pos_objeto"], df["aviso"] = -1, -1, ""
 
     tareas = []
-    for k, (texto, grupo) in enumerate(df[df["multi"]].groupby("texto_norm", sort=False)):
-        palabras = texto.split()
+    for k, (_, grupo) in enumerate(df[df["multi"]].groupby("grupo", sort=False)):
+        palabras = grupo["texto_norm"].iloc[0].split()
         asign = asignar(grupo, palabras)
         objetivos = []
         for t, i in enumerate(grupo.index, start=1):
@@ -124,15 +161,15 @@ def main():
                               "objeto": str(grupo.at[i, "Objeto"]), "pos_objeto": o, "aviso": aviso})
         tareas.append({"oracion_id": k, "palabras": palabras, "objetivos": objetivos})
 
-    with open(SALIDA / "tareas.jsonl", "w", encoding="utf-8") as fh:
+    with open(salida / "tareas.jsonl", "w", encoding="utf-8") as fh:
         for t in tareas:
             fh.write(json.dumps(t, ensure_ascii=False) + "\n")
-    df.to_csv(SALIDA / "filas.csv", index=True, index_label="fila")
+    df.to_csv(salida / "filas.csv", index=True, index_label="fila")
 
     m = df[df["multi"]]
-    print(f"filas: {len(df)} | filas en oraciones con varios objetos: {len(m)} | oraciones a dividir: {len(tareas)}")
+    print(f"[{args.corpus}] filas: {len(df)} | filas en oraciones con varios objetos: {len(m)} | oraciones a dividir: {len(tareas)}")
     print("por clase:", m["clase_mdo"].value_counts().to_dict())
-    print("objetos por oración:", m.groupby("texto_norm").size().value_counts().sort_index().to_dict())
+    print("objetos por oración:", m.groupby("grupo").size().value_counts().sort_index().to_dict())
     print("avisos:", m["aviso"].replace("", "ninguno").value_counts().to_dict())
     print("pares verbo+objeto idénticos en la misma oración:",
           int(m.duplicated(subset=["texto_norm", "Verbo", "Objeto"], keep=False).sum()))

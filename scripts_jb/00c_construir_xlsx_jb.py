@@ -15,6 +15,7 @@ Uso: python scripts_jb/00c_construir_xlsx_jb.py --tag gemma_v2
 import argparse
 import json
 import re
+from pathlib import Path
 
 import pandas as pd
 
@@ -22,6 +23,7 @@ from common_jb import ROOT
 
 SEG = ROOT / "dataset" / "segmentacion_jb"
 ORIGINALES = ["Corpus", "ID", "Texto oración", "Verbo", "Objeto", "Animacidad", "Determinante", "Definitud"]
+PIPELINE = ["sent_id", "verbo_id", "objeto_id", "archivo_fuente"]  # claves de los xlsx de PRESEEA/ESLORA
 VENTANA = 10
 HABER = {"hay", "había", "habia", "hubo", "habrá", "habra", "habría", "habria", "haya", "hubiera", "hubiese", "haber", "habiendo"}
 
@@ -93,12 +95,14 @@ def regla(tramos: dict, n: int) -> dict:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--tag", default="gemma_v2")
+    ap.add_argument("--tag", default="gemma_v3")
+    ap.add_argument("--dir", type=Path, default=SEG, help="carpeta del corpus (p. ej. dataset/segmentacion_jb/preseea)")
     a = ap.parse_args()
+    seg = a.dir if a.dir.is_absolute() else ROOT / a.dir
 
-    filas = pd.read_csv(SEG / "filas.csv", index_col="fila")
-    tareas = {t["oracion_id"]: t for t in map(json.loads, (SEG / "tareas.jsonl").read_text(encoding="utf-8").splitlines())}
-    respuestas = {r["oracion_id"]: r for r in map(json.loads, (SEG / f"respuestas_{a.tag}.jsonl").read_text(encoding="utf-8").splitlines())}
+    filas = pd.read_csv(seg / "filas.csv", index_col="fila")
+    tareas = {t["oracion_id"]: t for t in map(json.loads, (seg / "tareas.jsonl").read_text(encoding="utf-8").splitlines())}
+    respuestas = {r["oracion_id"]: r for r in map(json.loads, (seg / f"respuestas_{a.tag}.jsonl").read_text(encoding="utf-8").splitlines())}
 
     filas["segmentada"], filas["metodo"] = "no", ""
     filas["inicio_segmento"], filas["fin_segmento"] = -1, -1
@@ -143,13 +147,14 @@ def main():
             filas.loc[i, "Texto completo (referencia)"] = filas.at[i, "Texto oración"]
             filas.loc[i, "Texto oración"] = " ".join(palabras[ini : fin + 1])
 
-    completo = filas[ORIGINALES + ["clase_mdo", "archivo", "fila_excel", "segmentada", "metodo"]]
-    completo.to_excel(SEG / f"completo_jb_{a.tag}.xlsx", index=False)
+    hay = lambda cols: [c for c in cols if c in filas.columns]  # PRESEEA/ESLORA no traen Animacidad, etc.
+    completo = filas[hay(ORIGINALES + PIPELINE + ["clase_mdo", "archivo", "fila_excel", "segmentada", "metodo"])]
+    completo.to_excel(seg / f"completo_jb_{a.tag}.xlsx", index=False)
     div = filas[filas["segmentada"] == "sí"].sort_values(["oracion_id", "t"])
-    div = div[["oracion_id", "t", "Texto oración", "Texto completo (referencia)"] + ORIGINALES[3:]
-              + ["Corpus", "ID", "clase_mdo", "archivo", "fila_excel", "pos_verbo", "pos_objeto",
-                 "inicio_segmento", "fin_segmento", "metodo", "aviso", "alerta_gemma", "nota_gemma"]]
-    div.to_excel(SEG / f"divididas_jb_{a.tag}.xlsx", index=False)  # no pisa divididas_jb.xlsx (editado por el revisor)
+    div = div[hay(["oracion_id", "t", "Texto oración", "Texto completo (referencia)"] + ORIGINALES[3:]
+                  + ["Corpus", "ID"] + PIPELINE + ["clase_mdo", "archivo", "fila_excel", "pos_verbo", "pos_objeto",
+                     "inicio_segmento", "fin_segmento", "metodo", "aviso", "alerta_gemma", "nota_gemma"])]
+    div.to_excel(seg / f"divididas_jb_{a.tag}.xlsx", index=False)  # no pisa divididas_jb.xlsx (editado por el revisor)
     print(f"completo: {len(completo)} filas | divididas: {len(div)} filas de {len(tareas)} oraciones")
     print("método:", div["metodo"].value_counts().to_dict())
     print("con aviso:", int((div["aviso"] != "").sum()), "| contiene otro objetivo:", int(div["aviso"].str.contains("contiene otro").sum()),
