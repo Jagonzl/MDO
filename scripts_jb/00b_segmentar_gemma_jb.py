@@ -44,7 +44,7 @@ def main():
     ap.add_argument("--tag", default="gemma_v1")
     ap.add_argument("--chat-kwargs", default='{"enable_thinking": false}')
     ap.add_argument("--max-tokens", type=int, default=1024)
-    ap.add_argument("--max-model-len", type=int, default=16384)
+    ap.add_argument("--max-model-len", type=int, default=8192)  # 16384 no cabe en A100 80 GB; el prompt más largo ~3k tokens
     a = ap.parse_args()
 
     tareas = [json.loads(l) for l in (SEG / "tareas.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
