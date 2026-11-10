@@ -19,6 +19,7 @@ import pandas as pd
 from common_jb import RAW, ROOT
 
 SALIDA = ROOT / "dataset" / "segmentacion_jb"
+DISTANCIA_MAX = 15  # palabras entre verbo y objeto a partir de las que se avisa para revisar
 
 _spec = importlib.util.spec_from_file_location("build", ROOT / "scripts" / "01_build_dataset.py")
 _build = importlib.util.module_from_spec(_spec)
@@ -84,6 +85,8 @@ def asignar(grupo: pd.DataFrame, palabras: list[str]) -> dict:
         for v, i in zip(mejor, filas.index):
             _, o = coste(v, objs[i])
             aviso = "" if o >= 0 else "objeto no encontrado"
+            if o >= 0 and abs(o - v) > DISTANCIA_MAX:
+                aviso = f"verbo y objeto a {abs(o - v)} palabras (revisar anotación)"
             if not mejor_orden:
                 aviso = (aviso + "; " if aviso else "") + "no respeta el orden de filas"
             res[i] = (v, o, aviso)
