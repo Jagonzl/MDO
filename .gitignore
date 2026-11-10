@@ -6,3 +6,4 @@ checkpoints/
 *.bin
 modelos_jb/
 .hf_token_write
+~$*
