@@ -39,6 +39,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--usuario", default="johnatanebonilla")
     ap.add_argument("--par", type=int, nargs="*", help="índices en PARES; por defecto todos")
+    ap.add_argument("--prefijo", default="mdo-jb", help="prefijo del repo en HF (p. ej. mdo-jb-seg)")
     args = ap.parse_args()
     api = HfApi(token=os.environ["HF_TOKEN"])
 
@@ -50,7 +51,7 @@ def main():
             continue
         m = json.loads(archivo.read_text(encoding="utf-8"))
         ruta = Path(m["ruta_modelo"])
-        repo = f"{args.usuario}/mdo-jb-{tarea}-{modelo.replace('_', '-')}"
+        repo = f"{args.usuario}/{args.prefijo}-{tarea}-{modelo.replace('_', '-')}"
         (ruta / "README.md").write_text(TARJETA.format(
             repo=repo, tarea=tarea, clases=", ".join(TAREAS[tarea]["clases"]), base=MODELOS[modelo],
             seed=m["seed_guardada"], n=len(m["seeds"]), **m["hparams"],
