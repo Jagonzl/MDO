@@ -59,35 +59,45 @@ def coste(v: int, objs: list[int]) -> tuple[float, int]:
     return min(((o - v) if o >= v else 3 * (v - o), o) for o in objs)
 
 
+def pares_candidatos(palabras: list[str], verbo: str, objeto: str, k: int = 6) -> list[tuple[float, int, int]]:
+    """Los k pares (coste, pos_verbo, pos_objeto) más plausibles para una fila."""
+    pares = [(coste(v, [o])[0], v, o) for v in posiciones(palabras, verbo) for o in posiciones(palabras, objeto)]
+    return sorted(pares)[:k]
+
+
 def asignar(grupo: pd.DataFrame, palabras: list[str]) -> dict:
-    """Devuelve {índice de fila: (pos_verbo, pos_objeto, aviso)}."""
+    """Devuelve {índice de fila: (pos_verbo, pos_objeto, aviso)}.
+
+    Se asigna a cada fila un PAR (verbo, objeto). Las filas con el mismo verbo pueden compartir la aparición del verbo
+    (repeticiones como «conocías a toda la gente a toda la gente», OD coordinados), pero no el mismo par; dentro de
+    cada archivo van en orden de aparición. Entre las asignaciones posibles se elige la de menor distancia verbo→objeto.
+    """
     res = {}
     for _, filas in grupo.groupby(grupo["Verbo"].map(norm), sort=False):
         filas = filas.sort_values(["archivo", "fila_excel"])
-        cand_v = posiciones(palabras, filas["Verbo"].iloc[0])
-        objs = {i: posiciones(palabras, o) for i, o in zip(filas.index, filas["Objeto"])}
-        if not cand_v:
+        cands = {i: pares_candidatos(palabras, v, o) for i, v, o in zip(filas.index, filas["Verbo"], filas["Objeto"])}
+        if not all(cands.values()):
             for i in filas.index:
-                res[i] = (-1, -1, "verbo no encontrado")
-            continue
-        n = len(filas)
-        repetir = len(cand_v) < n  # menos apariciones del verbo que filas: varias filas comparten verbo (p. ej. OD coordinados)
-        combos = itertools.product(cand_v, repeat=n) if repetir else itertools.permutations(cand_v, n)
-        mejor, mejor_coste, mejor_orden = None, None, False
-        for combo in combos:
-            c = sum(coste(v, objs[i])[0] for v, i in zip(combo, filas.index))
-            # orden de aparición: dentro de cada archivo, filas posteriores -> verbo igual o posterior
+                if not cands[i]:
+                    res[i] = (-1, -1, "verbo no encontrado" if not posiciones(palabras, filas.at[i, "Verbo"]) else "objeto no encontrado")
+            filas = filas[[bool(cands[i]) for i in filas.index]]
+            if filas.empty:
+                continue
+        mejor, mejor_clave = None, None
+        for combo in itertools.product(*(cands[i] for i in filas.index)):
+            pares = [(v, o) for _, v, o in combo]
+            if len(set(pares)) < len(pares):
+                continue  # dos filas no pueden ser el mismo verbo+objeto
             orden = all(a <= b for arch in filas["archivo"].unique()
-                        for a, b in itertools.pairwise([v for v, ar in zip(combo, filas["archivo"]) if ar == arch]))
-            clave = (not orden, c)
-            if mejor is None or clave < (not mejor_orden, mejor_coste):
-                mejor, mejor_coste, mejor_orden = combo, c, orden
-        for v, i in zip(mejor, filas.index):
-            _, o = coste(v, objs[i])
-            aviso = "" if o >= 0 else "objeto no encontrado"
-            if o >= 0 and abs(o - v) > DISTANCIA_MAX:
-                aviso = f"verbo y objeto a {abs(o - v)} palabras (revisar anotación)"
-            if not mejor_orden:
+                        for a, b in itertools.pairwise([p for p, ar in zip(pares, filas["archivo"]) if ar == arch]))
+            clave = (not orden, sum(c for c, _, _ in combo))
+            if mejor_clave is None or clave < mejor_clave:
+                mejor, mejor_clave = combo, clave
+        if mejor is None:  # filas duplicadas idénticas (mismo verbo+objeto y una sola aparición): comparten par
+            mejor, mejor_clave = tuple(cands[i][0] for i in filas.index), (True, 0)
+        for (_, v, o), i in zip(mejor, filas.index):
+            aviso = f"verbo y objeto a {abs(o - v)} palabras (revisar anotación)" if abs(o - v) > DISTANCIA_MAX else ""
+            if mejor_clave[0]:
                 aviso = (aviso + "; " if aviso else "") + "no respeta el orden de filas"
             res[i] = (v, o, aviso)
     return res

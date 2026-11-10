@@ -23,6 +23,7 @@ from common_jb import ROOT
 SEG = ROOT / "dataset" / "segmentacion_jb"
 ORIGINALES = ["Corpus", "ID", "Texto oración", "Verbo", "Objeto", "Animacidad", "Determinante", "Definitud"]
 VENTANA = 10
+HABER = {"hay", "había", "habia", "hubo", "habrá", "habra", "habría", "habria", "haya", "hubiera", "hubiese", "haber", "habiendo"}
 
 
 def norm(w) -> str:
@@ -54,18 +55,25 @@ def parsear(respuesta: str) -> dict:
                 t = re.sub(r"\D", "", str(s.get("t", ""))) if isinstance(s, dict) else ""  # admite "T1"
                 if t:
                     res[int(t)] = {k: entero(s.get(k)) for k in ("inicio", "fin", "pos_verbo", "pos_objeto")}
+                    res[int(t)]["alerta"] = str(s.get("alerta") or "").strip()  # prompt v3
+                    res[int(t)]["nota"] = str(s.get("nota") or "").strip()
             return res
     return {}
 
 
 def validar(s: dict | None, obj: dict, palabras: list[str]):
-    """Devuelve (inicio, fin, pos_verbo, pos_objeto) si el segmento es válido; si no, None."""
+    """Devuelve (inicio, fin, pos_verbo, pos_objeto) si el segmento es válido; si no, None.
+
+    El objeto devuelto debe ser la palabra anotada. El verbo también, salvo con la alerta "verbo_no_rige" (prompt v3):
+    entonces Gemma da la posición del verbo rector real, que solo se exige que esté dentro del segmento.
+    """
     if not s or s["inicio"] is None or s["fin"] is None:
         return None
     n = len(palabras)
     v = s["pos_verbo"] if s.get("pos_verbo") is not None else obj["pos_verbo"]
     o = s["pos_objeto"] if s.get("pos_objeto") is not None else obj["pos_objeto"]
-    if not (0 <= v < n and 0 <= o < n and coincide(palabras[v], obj["verbo"]) and coincide(palabras[o], obj["objeto"])):
+    verbo_ok = s.get("alerta") == "verbo_no_rige" or (0 <= v < n and coincide(palabras[v], obj["verbo"]))
+    if not (0 <= v < n and 0 <= o < n and v != o and verbo_ok and coincide(palabras[o], obj["objeto"])):
         return None
     i, f = s["inicio"], s["fin"]
     return (i, f, v, o) if 0 <= i <= min(v, o) and max(v, o) <= f < n else None
@@ -96,6 +104,7 @@ def main():
     filas["inicio_segmento"], filas["fin_segmento"] = -1, -1
     filas["Texto completo (referencia)"] = ""
     filas["aviso"] = filas["aviso"].fillna("")
+    filas["alerta_gemma"], filas["nota_gemma"] = "", ""
     for k, tarea in tareas.items():
         palabras, objetivos = tarea["palabras"], tarea["objetivos"]
         segs = parsear(respuestas.get(k, {}).get("respuesta", ""))
@@ -122,22 +131,30 @@ def main():
                 avisos.append("contiene otro objetivo: " + ", ".join(f"T{u}" for u in otros))
             if v != o["pos_verbo"] or ob != o["pos_objeto"]:
                 avisos.append(f"posición corregida (verbo {o['pos_verbo']}→{v}, objeto {o['pos_objeto']}→{ob})")
-            filas.loc[i, ["inicio_segmento", "fin_segmento", "pos_verbo", "pos_objeto", "metodo", "segmentada", "aviso"]] = \
-                [ini, fin, v, ob, metodo, "sí", "; ".join(avisos)]
+            if norm(o["verbo"]) in HABER:
+                avisos.append("haber existencial (criterio del revisor: no se contabiliza como posible MDO)")
+            g = segs.get(t) or {}
+            alerta = g.get("alerta", "") if elegidos[t] else ""
+            if alerta == "verbo_no_rige" and 0 <= v < len(palabras):
+                alerta += f" (verbo rector: «{palabras[v]}», palabra {v})"
+            filas.loc[i, ["inicio_segmento", "fin_segmento", "pos_verbo", "pos_objeto", "metodo", "segmentada", "aviso",
+                          "alerta_gemma", "nota_gemma"]] = \
+                [ini, fin, v, ob, metodo, "sí", "; ".join(avisos), alerta, g.get("nota", "") if elegidos[t] else ""]
             filas.loc[i, "Texto completo (referencia)"] = filas.at[i, "Texto oración"]
             filas.loc[i, "Texto oración"] = " ".join(palabras[ini : fin + 1])
 
     completo = filas[ORIGINALES + ["clase_mdo", "archivo", "fila_excel", "segmentada", "metodo"]]
-    completo.to_excel(SEG / "completo_jb.xlsx", index=False)
+    completo.to_excel(SEG / f"completo_jb_{a.tag}.xlsx", index=False)
     div = filas[filas["segmentada"] == "sí"].sort_values(["oracion_id", "t"])
     div = div[["oracion_id", "t", "Texto oración", "Texto completo (referencia)"] + ORIGINALES[3:]
               + ["Corpus", "ID", "clase_mdo", "archivo", "fila_excel", "pos_verbo", "pos_objeto",
-                 "inicio_segmento", "fin_segmento", "metodo", "aviso"]]
-    div.to_excel(SEG / "divididas_jb.xlsx", index=False)
+                 "inicio_segmento", "fin_segmento", "metodo", "aviso", "alerta_gemma", "nota_gemma"]]
+    div.to_excel(SEG / f"divididas_jb_{a.tag}.xlsx", index=False)  # no pisa divididas_jb.xlsx (editado por el revisor)
     print(f"completo: {len(completo)} filas | divididas: {len(div)} filas de {len(tareas)} oraciones")
     print("método:", div["metodo"].value_counts().to_dict())
     print("con aviso:", int((div["aviso"] != "").sum()), "| contiene otro objetivo:", int(div["aviso"].str.contains("contiene otro").sum()),
           "| posición corregida:", int(div["aviso"].str.contains("corregida").sum()))
+    print("alertas de Gemma:", div["alerta_gemma"].str.split(" ").str[0].replace("", "ninguna").value_counts().to_dict())
     print("palabras por segmento (p50/p95/max):", div["Texto oración"].str.split().str.len().quantile([.5, .95, 1]).tolist())
 
 
