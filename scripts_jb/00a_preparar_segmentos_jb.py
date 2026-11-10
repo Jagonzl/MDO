@@ -95,9 +95,10 @@ def asignar(grupo: pd.DataFrame, palabras: list[str]) -> dict:
                 mejor, mejor_clave = combo, clave
         if mejor is None:  # filas duplicadas idénticas (mismo verbo+objeto y una sola aparición): comparten par
             mejor, mejor_clave = tuple(cands[i][0] for i in filas.index), (True, 0)
+        ambiguo = any(len(cands[i]) > 1 for i in filas.index)  # si cada fila tiene un único par, el orden da igual
         for (_, v, o), i in zip(mejor, filas.index):
             aviso = f"verbo y objeto a {abs(o - v)} palabras (revisar anotación)" if abs(o - v) > DISTANCIA_MAX else ""
-            if mejor_clave[0]:
+            if mejor_clave[0] and ambiguo:
                 aviso = (aviso + "; " if aviso else "") + "no respeta el orden de filas"
             res[i] = (v, o, aviso)
     return res
