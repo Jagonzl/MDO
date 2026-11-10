@@ -1,0 +1,11 @@
+columna,clase,train,dev,test,total
+Animacidad,animado,15.0,3.0,1.0,19.0
+Animacidad,humano,818.0,110.0,113.0,1041.0
+Animacidad,inanimado,762.0,89.0,94.0,945.0
+Corpus,ESLORA,1288.0,163.0,167.0,1618.0
+Corpus,PRESEEA,307.0,39.0,41.0,387.0
+Definitud,Definido,770.0,98.0,108.0,976.0
+Definitud,Indefinido,737.0,85.0,86.0,908.0
+Definitud,Por determinar,88.0,19.0,14.0,121.0
+clase_mdo,con_MDO,793.0,108.0,106.0,1007.0
+clase_mdo,sin_MDO,802.0,94.0,102.0,998.0
