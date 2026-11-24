@@ -1,6 +1,11 @@
 modelos/
 githubtoken.txt
+.hf_token_write
 __pycache__/
 checkpoints/
 *.safetensors
 *.bin
+~$*
+# intermedios de 00a (se regeneran en segundos)
+dataset/segmentacion/*/tareas.jsonl
+dataset/segmentacion/*/filas.csv

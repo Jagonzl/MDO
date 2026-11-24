@@ -1,0 +1,17 @@
+{
+  "modelo": "beto_cased",
+  "ruta": "/lustre/romanistik/bonillaj/mdo/modelos/segmentado/mdo/beto_cased/seed42/best",
+  "seed": 42,
+  "test_f1_macro": 0.9983965093241441,
+  "resultados": "/lustre/romanistik/bonillaj/mdo/MDO/resultados/segmentado",
+  "n": 9266,
+  "anotados": 392,
+  "clasificados": 8874,
+  "recortadas": 0,
+  "entorno": {
+    "gpu": "NVIDIA A100 80GB PCIe",
+    "bf16": true,
+    "torch": "2.14.1+cu130",
+    "transformers": "5.20.2"
+  }
+}

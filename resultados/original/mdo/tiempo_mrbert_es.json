@@ -1,0 +1,20 @@
+{
+  "modelo": "mrbert_es",
+  "tarea": "mdo",
+  "seg_por_ejemplo": 0.0063,
+  "min_busqueda_completa": 1.9,
+  "min_entrenamiento_final_5_epochs": 0.8,
+  "dev_tras_1_epoch": [
+    {
+      "epoch": 1,
+      "dev_f1_macro": 0.9070594210259015,
+      "dev_accuracy": 0.907103825136612
+    }
+  ],
+  "entorno": {
+    "gpu": "NVIDIA L40",
+    "bf16": true,
+    "torch": "2.14.1+cu130",
+    "transformers": "5.20.2"
+  }
+}

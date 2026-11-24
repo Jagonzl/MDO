@@ -1,0 +1,35 @@
+{
+  "tfidf_logreg": {
+    "Definido": {
+      "precision": 0.7252747252747253,
+      "recall": 0.673469387755102,
+      "f1-score": 0.6984126984126984,
+      "support": 98.0
+    },
+    "Indefinido": {
+      "precision": 0.6979166666666666,
+      "recall": 0.7362637362637363,
+      "f1-score": 0.7165775401069518,
+      "support": 91.0
+    },
+    "Por determinar": {
+      "precision": 0.21428571428571427,
+      "recall": 0.25,
+      "f1-score": 0.23076923076923078,
+      "support": 12.0
+    },
+    "accuracy": 0.6766169154228856,
+    "macro avg": {
+      "precision": 0.545825702075702,
+      "recall": 0.5532443746729462,
+      "f1-score": 0.5485864897629603,
+      "support": 201.0
+    },
+    "weighted avg": {
+      "precision": 0.6823819319155141,
+      "recall": 0.6766169154228856,
+      "f1-score": 0.6787175689721783,
+      "support": 201.0
+    }
+  }
+}

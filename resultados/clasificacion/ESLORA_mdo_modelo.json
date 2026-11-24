@@ -1,0 +1,17 @@
+{
+  "modelo": "beto_cased",
+  "ruta": "/lustre/romanistik/bonillaj/mdo/modelos/segmentado/mdo/beto_cased/seed42/best",
+  "seed": 42,
+  "test_f1_macro": 0.9983965093241441,
+  "resultados": "/lustre/romanistik/bonillaj/mdo/MDO/resultados/segmentado",
+  "n": 48422,
+  "anotados": 1637,
+  "clasificados": 46785,
+  "recortadas": 0,
+  "entorno": {
+    "gpu": "NVIDIA L40S",
+    "bf16": true,
+    "torch": "2.14.1+cu130",
+    "transformers": "5.20.2"
+  }
+}

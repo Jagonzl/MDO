@@ -1,4 +1,7 @@
-"""Líneas base: TF-IDF + regresión logística y, en MDO, la regla 'a/al delante del objeto'."""
+"""Líneas base: TF-IDF + regresión logística y, en MDO, la regla 'a/al delante del objeto'. No necesita GPU.
+
+Uso: python scripts/02_baseline.py --task mdo        (MDO_VERSION=segmentado para el dataset segmentado)
+"""
 import argparse
 import json
 import re

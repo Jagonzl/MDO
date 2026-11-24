@@ -1,0 +1,227 @@
+{
+  "modelo": "beto_cased",
+  "tarea": "mdo",
+  "lr": 5e-05,
+  "batch": 16,
+  "epochs": 2,
+  "dev_f1_macro_small": 1.0,
+  "min_busqueda": 2.5,
+  "entorno": {
+    "gpu": "NVIDIA A100 80GB PCIe",
+    "bf16": true,
+    "torch": "2.14.1+cu130",
+    "transformers": "5.20.2"
+  },
+  "busqueda": [
+    {
+      "lr": 2e-05,
+      "batch": 8,
+      "epoch": 1,
+      "dev_f1_macro": 0.9800729999013515,
+      "dev_accuracy": 0.9801980198019802
+    },
+    {
+      "lr": 2e-05,
+      "batch": 8,
+      "epoch": 2,
+      "dev_f1_macro": 0.9800395256916996,
+      "dev_accuracy": 0.9801980198019802
+    },
+    {
+      "lr": 2e-05,
+      "batch": 8,
+      "epoch": 3,
+      "dev_f1_macro": 0.9900364999506758,
+      "dev_accuracy": 0.9900990099009901
+    },
+    {
+      "lr": 2e-05,
+      "batch": 8,
+      "epoch": 4,
+      "dev_f1_macro": 0.9850425768233988,
+      "dev_accuracy": 0.9851485148514851
+    },
+    {
+      "lr": 2e-05,
+      "batch": 8,
+      "epoch": 5,
+      "dev_f1_macro": 0.9850425768233988,
+      "dev_accuracy": 0.9851485148514851
+    },
+    {
+      "lr": 2e-05,
+      "batch": 16,
+      "epoch": 1,
+      "dev_f1_macro": 0.9450584773632025,
+      "dev_accuracy": 0.9455445544554455
+    },
+    {
+      "lr": 2e-05,
+      "batch": 16,
+      "epoch": 2,
+      "dev_f1_macro": 0.9850425768233988,
+      "dev_accuracy": 0.9851485148514851
+    },
+    {
+      "lr": 2e-05,
+      "batch": 16,
+      "epoch": 3,
+      "dev_f1_macro": 0.9900364999506758,
+      "dev_accuracy": 0.9900990099009901
+    },
+    {
+      "lr": 2e-05,
+      "batch": 16,
+      "epoch": 4,
+      "dev_f1_macro": 0.9900364999506758,
+      "dev_accuracy": 0.9900990099009901
+    },
+    {
+      "lr": 2e-05,
+      "batch": 16,
+      "epoch": 5,
+      "dev_f1_macro": 0.9900364999506758,
+      "dev_accuracy": 0.9900990099009901
+    },
+    {
+      "lr": 3e-05,
+      "batch": 8,
+      "epoch": 1,
+      "dev_f1_macro": 0.9750709613723312,
+      "dev_accuracy": 0.9752475247524752
+    },
+    {
+      "lr": 3e-05,
+      "batch": 8,
+      "epoch": 2,
+      "dev_f1_macro": 0.9800395256916996,
+      "dev_accuracy": 0.9801980198019802
+    },
+    {
+      "lr": 3e-05,
+      "batch": 8,
+      "epoch": 3,
+      "dev_f1_macro": 0.9850425768233988,
+      "dev_accuracy": 0.9851485148514851
+    },
+    {
+      "lr": 3e-05,
+      "batch": 8,
+      "epoch": 4,
+      "dev_f1_macro": 0.9850425768233988,
+      "dev_accuracy": 0.9851485148514851
+    },
+    {
+      "lr": 3e-05,
+      "batch": 8,
+      "epoch": 5,
+      "dev_f1_macro": 0.9850425768233988,
+      "dev_accuracy": 0.9851485148514851
+    },
+    {
+      "lr": 3e-05,
+      "batch": 16,
+      "epoch": 1,
+      "dev_f1_macro": 0.9751445797957425,
+      "dev_accuracy": 0.9752475247524752
+    },
+    {
+      "lr": 3e-05,
+      "batch": 16,
+      "epoch": 2,
+      "dev_f1_macro": 0.9900364999506758,
+      "dev_accuracy": 0.9900990099009901
+    },
+    {
+      "lr": 3e-05,
+      "batch": 16,
+      "epoch": 3,
+      "dev_f1_macro": 0.97000297000297,
+      "dev_accuracy": 0.9702970297029703
+    },
+    {
+      "lr": 3e-05,
+      "batch": 16,
+      "epoch": 4,
+      "dev_f1_macro": 0.9900364999506758,
+      "dev_accuracy": 0.9900990099009901
+    },
+    {
+      "lr": 3e-05,
+      "batch": 16,
+      "epoch": 5,
+      "dev_f1_macro": 0.9900364999506758,
+      "dev_accuracy": 0.9900990099009901
+    },
+    {
+      "lr": 5e-05,
+      "batch": 8,
+      "epoch": 1,
+      "dev_f1_macro": 0.9800395256916996,
+      "dev_accuracy": 0.9801980198019802
+    },
+    {
+      "lr": 5e-05,
+      "batch": 8,
+      "epoch": 2,
+      "dev_f1_macro": 0.9950220557431184,
+      "dev_accuracy": 0.995049504950495
+    },
+    {
+      "lr": 5e-05,
+      "batch": 8,
+      "epoch": 3,
+      "dev_f1_macro": 0.9950220557431184,
+      "dev_accuracy": 0.995049504950495
+    },
+    {
+      "lr": 5e-05,
+      "batch": 8,
+      "epoch": 4,
+      "dev_f1_macro": 1.0,
+      "dev_accuracy": 1.0
+    },
+    {
+      "lr": 5e-05,
+      "batch": 8,
+      "epoch": 5,
+      "dev_f1_macro": 1.0,
+      "dev_accuracy": 1.0
+    },
+    {
+      "lr": 5e-05,
+      "batch": 16,
+      "epoch": 1,
+      "dev_f1_macro": 0.9900512214342001,
+      "dev_accuracy": 0.9900990099009901
+    },
+    {
+      "lr": 5e-05,
+      "batch": 16,
+      "epoch": 2,
+      "dev_f1_macro": 1.0,
+      "dev_accuracy": 1.0
+    },
+    {
+      "lr": 5e-05,
+      "batch": 16,
+      "epoch": 3,
+      "dev_f1_macro": 1.0,
+      "dev_accuracy": 1.0
+    },
+    {
+      "lr": 5e-05,
+      "batch": 16,
+      "epoch": 4,
+      "dev_f1_macro": 1.0,
+      "dev_accuracy": 1.0
+    },
+    {
+      "lr": 5e-05,
+      "batch": 16,
+      "epoch": 5,
+      "dev_f1_macro": 1.0,
+      "dev_accuracy": 1.0
+    }
+  ]
+}

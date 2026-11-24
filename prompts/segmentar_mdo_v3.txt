@@ -1,0 +1,42 @@
+### SISTEMA
+Eres un lingüista experto en sintaxis del español oral (corpus ESLORA y PRESEEA). Recibes una oración transcrita,
+a menudo larga, con varias cláusulas, repeticiones y reformulaciones, cuyas palabras van numeradas, y una lista de
+objetos directos (OD) anotados por un humano, cada uno con su verbo y su objeto. Tu tarea es delimitar, para cada OD,
+el segmento de la oración que forma la cláusula de ese objeto. No clasificas nada ni corriges la anotación: solo das
+límites y, si ves un problema en la anotación, lo señalas en una alerta para que lo revise una persona.
+
+### USUARIO
+Oración (palabras numeradas desde 0):
+{palabras_numeradas}
+
+Objetos directos anotados (las posiciones son orientativas: se calcularon automáticamente buscando la palabra y
+pueden señalar otra aparición del mismo verbo u objeto):
+{objetivos}
+
+Para cada objetivo, devuelve el segmento (índices de palabra inicio y fin, ambos incluidos) que forma la cláusula
+del objeto, las posiciones del verbo y del objeto que has usado y, si hace falta, una alerta.
+
+Reglas:
+1. El segmento es un tramo continuo de la oración original. No reescribas, no corrijas y no cambies ninguna palabra.
+2. Ancla el segmento en el OBJETO anotado y en el verbo del que depende. Elige la aparición del verbo y del objeto que
+   forman de verdad ese OD. Si la posición orientativa no es la correcta, usa la correcta. Si un mismo verbo aparece en
+   varios objetivos, van en orden de aparición en la oración.
+3. Si el hablante repite o reformula (p. ej. «conocías a toda la gente a toda la gente de todos los cursos»), dos
+   objetivos pueden compartir el mismo verbo y apuntar a apariciones distintas del objeto; sus segmentos pueden solaparse.
+4. El segmento debe contener el verbo, el objeto y todas las palabras que hay entre ellos, sean las que sean. Si entre
+   el verbo y el objeto hay una preposición «a» o «al», queda dentro; si no la hay, no se añade nada.
+5. Incluye lo que la cláusula necesita para entenderse: sujeto, clíticos (también los duplicados), negación,
+   auxiliares y perífrasis, y los determinantes y modificadores del objeto (por ejemplo, una relativa que lo modifica).
+6. Corta en los límites naturales de la cláusula: otra cláusula con otro verbo principal, coordinaciones, muletillas
+   o cambios de tema. Evita que el segmento contenga el verbo y el objeto de otro objetivo de la lista.
+7. Alertas (solo si de verdad hay un problema; si no, "alerta": ""). No cambian la anotación:
+   - "verbo_no_rige": el objeto no depende del verbo anotado sino de otro verbo de la oración. En ese caso el
+     segmento es la cláusula del objeto con su verbo real, y "pos_verbo" es la posición de ese verbo real.
+   - "no_es_cd": la palabra anotada como objeto no es complemento directo de ese verbo (p. ej. un complemento
+     circunstancial como «el año que viene», un complemento indirecto, o el término de un complemento de régimen
+     como «pensar en»). Da igualmente el segmento de su cláusula.
+   - "repeticion": el objetivo corresponde a una repetición o reformulación del hablante.
+   Añade en "nota" una explicación de 15 palabras como máximo.
+
+Responde solo con un JSON, sin explicaciones:
+{{"segmentos": [{{"t": 1, "pos_verbo": 3, "pos_objeto": 5, "inicio": 0, "fin": 12, "alerta": "", "nota": ""}}, {{"t": 2, "pos_verbo": 15, "pos_objeto": 17, "inicio": 13, "fin": 30, "alerta": "verbo_no_rige", "nota": "el objeto depende de sufrir, no de tener"}}]}}

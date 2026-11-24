@@ -1,9 +1,15 @@
+"""Entrenamiento y predicción de los clasificadores BERT (Hugging Face Trainer).
+
+En GPU se usa bf16 + TF32 si la GPU lo admite (MDO_BF16=0 lo desactiva). Batch de evaluación 128.
+Sin GPU también funciona, más lento.
+"""
+import os
 import time
 
 import numpy as np
 import pandas as pd
 import torch
-from datasets import Dataset
+import transformers
 from sklearn.metrics import accuracy_score, f1_score
 from transformers import (
     AutoModelForSequenceClassification,
@@ -16,13 +22,41 @@ from transformers import (
 
 from common import MODELOS, SEED, TAREAS, tokenizar
 
-torch.set_num_threads(6)
+GPU = torch.cuda.is_available()
+BF16 = GPU and torch.cuda.is_bf16_supported() and os.environ.get("MDO_BF16", "1") != "0"
+if GPU:
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
 
 
-def a_dataset(tokenizer, df: pd.DataFrame) -> Dataset:
+def entorno() -> dict:
+    return {"gpu": torch.cuda.get_device_name(0) if GPU else "cpu", "bf16": BF16,
+            "torch": torch.__version__, "transformers": transformers.__version__}
+
+
+def a_dataset(tokenizer, df: pd.DataFrame) -> "Dataset":
+    from datasets import Dataset  # solo hace falta para entrenar
+
     enc = tokenizar(tokenizer, df)
     enc["labels"] = df["labels"].tolist()
     return Dataset.from_dict(dict(enc))
+
+
+def probabilidades(model, tokenizer, df: pd.DataFrame, batch: int = 128) -> np.ndarray:
+    """Softmax por clase (n_ejemplos × n_clases), en el mismo orden que df."""
+    model.eval()
+    dispositivo = next(model.parameters()).device
+    probs = []
+    with torch.no_grad(), torch.autocast("cuda", dtype=torch.bfloat16, enabled=BF16):
+        for i in range(0, len(df), batch):
+            enc = tokenizer.pad(tokenizar(tokenizer, df.iloc[i : i + batch]), return_tensors="pt").to(dispositivo)
+            probs.append(model(**enc).logits.float().softmax(-1).cpu())
+    return torch.cat(probs).numpy()
+
+
+def predecir(model, tokenizer, df: pd.DataFrame, batch: int = 128) -> np.ndarray:
+    """Predicción en el mismo orden que df (trainer.predict puede reordenar los ejemplos)."""
+    return probabilidades(model, tokenizer, df, batch).argmax(-1)
 
 
 def pesos_clase(train: pd.DataFrame, n_clases: int) -> torch.Tensor:
@@ -37,7 +71,7 @@ def metricas(pred):
 
 
 def entrenar(tarea: str, modelo: str, train: pd.DataFrame, dev: pd.DataFrame, lr: float, batch: int,
-             epochs: int, output_dir, guardar: bool, paciencia: int | None = None):
+             epochs: int, output_dir, guardar: bool, paciencia: int | None = None, seed: int = SEED):
     """Entrena y devuelve (trainer, historial de evaluación en dev por época, segundos por ejemplo)."""
     clases = TAREAS[tarea]["clases"]
     tokenizer = AutoTokenizer.from_pretrained(MODELOS[modelo])
@@ -51,13 +85,14 @@ def entrenar(tarea: str, modelo: str, train: pd.DataFrame, dev: pd.DataFrame, lr
         loss_fn = torch.nn.CrossEntropyLoss(weight=pesos_clase(train, len(clases)))
 
         def compute_loss_func(outputs, labels, num_items_in_batch=None):
-            return loss_fn(outputs.logits, labels)
+            logits = outputs.logits.float()
+            return loss_fn.to(logits.device)(logits, labels)
 
     args = TrainingArguments(
         output_dir=str(output_dir),
         learning_rate=lr,
         per_device_train_batch_size=batch,
-        per_device_eval_batch_size=32,
+        per_device_eval_batch_size=128,
         num_train_epochs=epochs,
         warmup_steps=0.1,
         weight_decay=0.01,
@@ -68,9 +103,9 @@ def entrenar(tarea: str, modelo: str, train: pd.DataFrame, dev: pd.DataFrame, lr
         metric_for_best_model="f1_macro",
         logging_strategy="epoch",
         train_sampling_strategy="group_by_length",
-        use_cpu=True,
+        bf16=BF16,
         report_to="none",
-        seed=SEED,
+        seed=seed,
     )
     callbacks = [EarlyStoppingCallback(early_stopping_patience=paciencia)] if guardar and paciencia else []
     trainer = Trainer(

@@ -1,0 +1,4 @@
+Corpus,ID,Texto oración,Verbo,Objeto,Animacidad,Determinante,Definitud,clase_mdo,archivo,fila_excel,segmentada,metodo,par,texto,recortada,motivo
+ESLORA,SCOM_M21_041__SCOM_M21_041_hab2__000923,cuando llevaron a mi padre para el hospital a mi madre,llevaron,madre,humano,mi,Definido,con_MDO,Muestra_FINAL_MDO_1008 (1).xlsx,565,sí,gemma,verbo: llevaron ; objeto: madre,cuando llevaron a mi padre para el hospital a mi madre,False,no es CD (revisión)
+PRESEEA,CADI_H33_003__hab1__000085,no pensé en nada la verdad,pensé,verdad,inanimado,la,Definido,sin_MDO,Muestra_FINAL_1000_sin_MDO (1).xlsx,672,sí,gemma,verbo: pensé ; objeto: verdad,no pensé en nada la verdad,False,no es CD (revisión)
+PRESEEA,CADI_H13_006__hab1__000198,"empezar el año que viene,",empezar,año,inanimado,el,Definido,sin_MDO,Muestra_FINAL_1000_sin_MDO (1).xlsx,719,sí,gemma,verbo: empezar ; objeto: año,"empezar el año que viene,",False,no es CD (revisión)
