@@ -26,7 +26,7 @@ LRS = {"mbert": [2e-5, 3e-5, 5e-5], "beto_cased": [2e-5, 3e-5, 5e-5], "beto_unca
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--task", choices=TAREAS)
+    ap.add_argument("--task", choices=TAREAS, default="mdo")
     ap.add_argument("--model", choices=MODELOS)
     ap.add_argument("--par", type=int, help="índice en PARES (sustituye a --task/--model)")
     ap.add_argument("--solo-tiempo", action="store_true")
@@ -34,7 +34,7 @@ def main():
     if args.par is not None:
         args.task, args.model = PARES[args.par]
     if not (args.task and args.model):
-        ap.error("hace falta --task y --model, o --par")
+        ap.error("hace falta --model, o --par")
     print(f"== {args.task} / {args.model} | {entorno()}", flush=True)
 
     train_full, dev = cargar_split(args.task, "train"), cargar_split(args.task, "dev")

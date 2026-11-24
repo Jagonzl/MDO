@@ -1,15 +1,18 @@
 # MDO: clasificación del marcado diferencial de objeto en ESLORA y PRESEEA
 
-Clasificadores BERT en español entrenados con la muestra anotada a mano de ESLORA y PRESEEA:
+Clasificador BERT en español que decide si un objeto directo lleva marcado diferencial (`con_MDO`, p. ej. «conocí
+**a** mi mujer») o no (`sin_MDO`). Se entrena con la muestra anotada a mano de ESLORA y PRESEEA.
 
-- **MDO**: objeto directo con marcado diferencial (`con_MDO`) frente a sin marcado (`sin_MDO`).
-- **Definitud**: `Definido`, `Indefinido`, `Por determinar`.
+**Modelo final**: [johnatanebonilla/mdo-beto-cased](https://huggingface.co/johnatanebonilla/mdo-beto-cased), en
+Hugging Face. Es privado: para usarlo hay que iniciar sesión con una cuenta que tenga acceso.
 
-Esta rama contiene tres pasos:
+Esta rama contiene cuatro pasos:
 
-1. La comparación de 5 modelos en las dos tareas, entrenados en GPU en el clúster de la HU.
-2. La segmentación de las oraciones con varios objetos directos y el reentrenamiento del mejor modelo de MDO con ellas.
+1. La comparación de 5 modelos, entrenados en GPU en el clúster de la HU.
+2. La segmentación de las oraciones con varios objetos directos y el reentrenamiento del mejor modelo con ellas.
 3. La clasificación MDO de todos los objetos de PRESEEA y ESLORA.
+4. El cálculo de cuántas oraciones faltan, por clase de animacidad y de definitud, para que la muestra sea
+   representativa.
 
 ## Qué abrir primero
 
@@ -17,7 +20,8 @@ Esta rama contiene tres pasos:
 |---|---|
 | `resultados/clasificacion/PRESEEA_mdo.xlsx` | Clasificación MDO de los 9 266 objetos de PRESEEA |
 | `resultados/clasificacion/ESLORA_mdo.xlsx` | Clasificación MDO de los 48 422 objetos de ESLORA |
-| `resultados/original/resumen.md` | Tabla de resultados de los 5 modelos en las dos tareas |
+| `resultados/original/resumen.md` | Tabla de resultados de los 5 modelos |
+| `resultados/representatividad.csv` | Cuántas oraciones faltan por clase de animacidad y de definitud (punto 4) |
 | `dataset/segmentacion/muestra/divididas_gemma_v3.xlsx` | Las oraciones segmentadas de la muestra, con la oración completa al lado |
 
 Los Excel de clasificación tienen tres columnas:
@@ -48,17 +52,17 @@ filas en el mismo orden, con estas columnas:
 
 F1 macro en test (media de las 3 semillas; 1 = todo acertado, cuenta igual cada clase):
 
-| Modelo | MDO | Definitud |
-|---|---|---|
-| BETO cased (`dccuchile/bert-base-spanish-wwm-cased`) | **0,996** | **0,842** |
-| MrBERT-es (`BSC-LT/MrBERT-es`) | 0,995 | 0,841 |
-| mBERT (`google-bert/bert-base-multilingual-cased`) | 0,991 | 0,832 |
-| BETO uncased (`dccuchile/bert-base-spanish-wwm-uncased`) | 0,976 | 0,836 |
-| MrBERT (`BSC-LT/MrBERT`) | 0,933 | 0,368 |
-| Línea base: regla de la «a» | 0,946 | — |
-| Línea base: tf-idf + regresión logística | 0,815 | 0,549 |
+| Modelo | F1 macro |
+|---|---|
+| BETO cased (`dccuchile/bert-base-spanish-wwm-cased`) | **0,996** |
+| MrBERT-es (`BSC-LT/MrBERT-es`) | 0,995 |
+| mBERT (`google-bert/bert-base-multilingual-cased`) | 0,991 |
+| BETO uncased (`dccuchile/bert-base-spanish-wwm-uncased`) | 0,976 |
+| MrBERT (`BSC-LT/MrBERT`) | 0,933 |
+| Línea base: regla de la «a» | 0,946 |
+| Línea base: tf-idf + regresión logística | 0,815 |
 
-El mejor modelo en las dos tareas es BETO cased. La tabla completa (hiperparámetros, desviación, GPU) está en
+El mejor modelo es BETO cased. La tabla completa (hiperparámetros, desviación, GPU) está en
 `resultados/original/resumen.md`. Cada carpeta `final_<modelo>/` tiene `metricas.json` y `predicciones_test.csv`
 (frase, clase real y clase predicha en test) del modelo guardado.
 
@@ -101,8 +105,9 @@ objeto. Ninguna otra celda cambia; se comprobó celda a celda.
 - **Modelo**: BETO cased, con lr 5e-5, batch 16 y 2 épocas.
 - **Test**: F1 macro de 0,998 ± 0,003 (3 semillas), con las 35 filas segmentadas del test bien clasificadas.
   - Líneas base en el mismo test: regla de la «a» 0,961; tf-idf 0,803.
-- **Dónde está el modelo**: en Hugging Face, `johnatanebonilla/mdo-jb-seg-mdo-beto-cased` (privado). No está en el
-  repositorio porque pesa 420 MB.
+- **Dónde está el modelo**: en Hugging Face,
+  [johnatanebonilla/mdo-beto-cased](https://huggingface.co/johnatanebonilla/mdo-beto-cased) (privado), con una ficha
+  que explica cómo usarlo. No está en el repositorio porque pesa 420 MB.
 
 ### Archivos de `dataset/segmentacion/<corpus>/` (muestra, preseea, eslora)
 
@@ -166,14 +171,56 @@ Columnas de revisión de `divididas_*`:
 - **Sin segmentar**: 3 filas de PRESEEA y 18 de ESLORA, porque su verbo o su objeto no aparece en la oración (error
   del pipeline). Se clasifican con la oración completa.
 
+## 4. Qué falta para que la muestra sea representativa (`resultados/representatividad.csv`)
+
+En la muestra, el MDO casi coincide con la animacidad:
+
+- **con_MDO** es humano en 966 de 1 007 filas.
+- **sin_MDO** es inanimado en 918 de 998 filas.
+
+Los casos que contradicen ese patrón (con_MDO inanimado, sin_MDO humano, animados) son muy pocos, y con tan pocos el
+modelo puede aprender «humano = con_MDO» en vez del marcado. Lo mismo pasa, en menor medida, con «Por determinar».
+
+La tabla cuenta, dentro de cada clase de MDO, cuántas oraciones hay de cada clase y cuántas faltan para llegar a un
+mínimo de 100 o de 200 por combinación. Con el reparto 80/10/10 quedan unas 10 o 20 en test.
+
+| MDO | Clase | En la muestra | Faltan (mín. 100) | Faltan (mín. 200) | Candidatos en el corpus* |
+|---|---|---|---|---|---|
+| con_MDO | humano | 966 | 0 | 0 | 359 |
+| con_MDO | inanimado | 27 | **73** | **173** | 560 |
+| con_MDO | animado | 14 | **86** | **186** | 4 |
+| sin_MDO | humano | 75 | **25** | **125** | 1 252 |
+| sin_MDO | inanimado | 918 | 0 | 0 | 28 523 |
+| sin_MDO | animado | 5 | **95** | **195** | 101 |
+| con_MDO | Definido | 644 | 0 | 0 | 242 |
+| con_MDO | Indefinido | 286 | 0 | 0 | 70 |
+| con_MDO | Por determinar | 77 | **23** | **123** | — |
+| sin_MDO | Definido | 332 | 0 | 0 | 6 498 |
+| sin_MDO | Indefinido | 622 | 0 | 0 | 5 676 |
+| sin_MDO | Por determinar | 44 | **56** | **156** | — |
+
+\* Objetos de PRESEEA y ESLORA que no están en la muestra y no son clíticos. Su clase MDO es la del clasificador; su
+animacidad y definitud son las del pipeline, sin revisar. Sirven para saber dónde buscar, no como etiqueta.
+
+- **Cuántas oraciones nuevas hacen falta.** Para el mínimo de 100 faltan 279 por animacidad y 79 por definitud; para
+  el de 200, 679 y 279. Cada oración nueva cuenta a la vez para las dos (por ejemplo, un animado «Por determinar»), así
+  que hacen falta entre **279 y 358** oraciones nuevas para el mínimo de 100, y entre **679 y 958** para el de 200.
+- **Animados con MDO.** Son la clase más difícil de completar: el pipeline solo encuentra 4 candidatos. Reconoce los
+  animales con una lista de lemas, así que habrá más, pero hay que buscarlos a mano (perro, gato, caballo…).
+- **con_MDO inanimado.** Los 560 candidatos son lo que el clasificador marcó como con_MDO sobre objetos que el pipeline
+  da por inanimados. Muchos serán errores de alguno de los dos, así que hay que revisarlos antes de anotarlos.
+- **«Por determinar».** No existe en el pipeline; hay que buscarlo en la anotación manual.
+- **Combinaciones de los dos ejes.** Hay muy pocas de sin_MDO humano definido (14) y de con_MDO inanimado indefinido
+  (3). El cruce completo de las tres variables lo da `scripts/08_representatividad.py`.
+
 ## Estructura
 
 ```
 dataset/
   raw/muestra/                 Excel de la muestra anotada (con_MDO y sin_MDO)
   raw/preseea/, raw/eslora/    Excel del pipeline (hoja «objetos»)
-  processed/original/          train/dev/test de MDO y Definitud (punto 1)
-  processed/segmentado/        train/dev/test de MDO con las oraciones segmentadas (punto 2)
+  processed/original/          train/dev/test (punto 1)
+  processed/segmentado/        train/dev/test con las oraciones segmentadas (punto 2)
   segmentacion/                muestra/, preseea/, eslora/: segmentación de cada corpus
 prompts/                       instrucciones para Gemma
 scripts/
@@ -187,12 +234,14 @@ scripts/
   05_subir_hf.py               sube el modelo final a Hugging Face
   06_informe.py                tabla resumen de resultados
   07_clasificar_mdo.py         clasifica MDO un corpus segmentado (GPU recomendada)
+  08_representatividad.py      cuántas oraciones faltan por clase de animacidad y definitud
   common.py, entrenamiento.py  funciones comunes
 slurm/                         trabajos para el clúster
 resultados/
   original/                    punto 1
   segmentado/                  punto 2
   clasificacion/               punto 3
+  representatividad.csv        punto 4
 ```
 
 ## Cómo reproducirlo
@@ -204,8 +253,8 @@ repositorio. Lo marcado como GPU se lanza con `sbatch`; el resto corre en el log
 ```bash
 # 1. Comparación de modelos
 $PY scripts/01_build_dataset.py --version original
-$PY scripts/02_baseline.py --task mdo                    # y --task definitud
-J=$(sbatch --parsable slurm/03_busqueda.sbatch)          # GPU, 10 trabajos: 2 tareas × 5 modelos
+$PY scripts/02_baseline.py
+J=$(sbatch --parsable slurm/03_busqueda.sbatch)          # GPU, 5 trabajos: uno por modelo
 sbatch --dependency=aftercorr:$J slurm/04_final.sbatch   # GPU
 $PY scripts/06_informe.py
 
@@ -215,13 +264,16 @@ sbatch slurm/00_segmentar_gemma.sbatch --corpus muestra  # GPU
 $PY scripts/00c_construir_xlsx.py --corpus muestra
 $PY scripts/01_build_dataset.py --version segmentado
 sbatch slurm/reentreno_segmentado.sbatch                 # GPU
-HF_TOKEN=... MDO_VERSION=segmentado $PY scripts/05_subir_hf.py --par 3 --prefijo mdo-jb-seg
+HF_TOKEN=... MDO_VERSION=segmentado $PY scripts/05_subir_hf.py --model beto_cased   # -> mdo-beto-cased
 
 # 3. PRESEEA (ESLORA igual, con --corpus eslora y --time=04:00:00 en la segmentación)
 $PY scripts/00a_preparar_segmentos.py --corpus preseea
 sbatch slurm/00_segmentar_gemma.sbatch --corpus preseea --max-tokens 4096   # GPU
 $PY scripts/00c_construir_xlsx.py --corpus preseea
 sbatch slurm/07_clasificar.sbatch --corpus preseea      # GPU
+
+# 4. Representatividad (después de clasificar PRESEEA y ESLORA)
+$PY scripts/08_representatividad.py
 ```
 
 Notas:
@@ -232,7 +284,6 @@ Notas:
   `--modelo <carpeta o repo de Hugging Face>`.
 - **CPU frente a GPU.** En la comprobación con PRESEEA cambió 1 etiqueta de 8 874: un caso límite, con seguridad del
   50 %.
-- **Versión de scikit-learn.** La partición agrupada (`StratifiedGroupKFold`) cambia entre versiones de
-  scikit-learn. Para obtener exactamente los mismos train/dev/test:
-  - `--version original`: scikit-learn 1.9 (PC de Javier; comprobado con 1.9.1);
-  - `--version segmentado`: scikit-learn 1.7.2 (el del clúster).
+- **Versión de scikit-learn.** La partición del dataset segmentado se agrupa por oración (`StratifiedGroupKFold`), y
+  esa partición cambia entre versiones de scikit-learn. La oficial se hizo con la 1.7.2, la del clúster. La del
+  dataset original sale igual con cualquier versión.

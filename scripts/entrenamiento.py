@@ -59,11 +59,6 @@ def predecir(model, tokenizer, df: pd.DataFrame, batch: int = 128) -> np.ndarray
     return probabilidades(model, tokenizer, df, batch).argmax(-1)
 
 
-def pesos_clase(train: pd.DataFrame, n_clases: int) -> torch.Tensor:
-    conteo = np.bincount(train["labels"], minlength=n_clases)
-    return torch.tensor(len(train) / (n_clases * conteo), dtype=torch.float)
-
-
 def metricas(pred):
     y_pred = pred.predictions.argmax(-1)
     return {"accuracy": accuracy_score(pred.label_ids, y_pred),
@@ -79,14 +74,6 @@ def entrenar(tarea: str, modelo: str, train: pd.DataFrame, dev: pd.DataFrame, lr
         MODELOS[modelo], num_labels=len(clases),
         id2label=dict(enumerate(clases)), label2id={c: i for i, c in enumerate(clases)},
     )
-
-    compute_loss_func = None
-    if tarea == "definitud":
-        loss_fn = torch.nn.CrossEntropyLoss(weight=pesos_clase(train, len(clases)))
-
-        def compute_loss_func(outputs, labels, num_items_in_batch=None):
-            logits = outputs.logits.float()
-            return loss_fn.to(logits.device)(logits, labels)
 
     args = TrainingArguments(
         output_dir=str(output_dir),
@@ -116,7 +103,6 @@ def entrenar(tarea: str, modelo: str, train: pd.DataFrame, dev: pd.DataFrame, lr
         processing_class=tokenizer,
         data_collator=DataCollatorWithPadding(tokenizer),
         compute_metrics=metricas,
-        compute_loss_func=compute_loss_func,
         callbacks=callbacks,
     )
     inicio = time.time()

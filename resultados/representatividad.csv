@@ -1,0 +1,19 @@
+eje,clase_mdo,clase,muestra,faltan_min100,faltan_min200,candidatos_corpus,candidatos_sin_cliticos
+Animacidad,todas,humano,1041,0,0,13253,1611
+Animacidad,todas,inanimado,945,0,0,29083,29083
+Animacidad,todas,animado,19,81,181,105,105
+Animacidad,con_MDO,humano,966,0,0,1209,359
+Animacidad,con_MDO,inanimado,27,73,173,560,560
+Animacidad,con_MDO,animado,14,86,186,4,4
+Animacidad,sin_MDO,humano,75,25,125,12044,1252
+Animacidad,sin_MDO,inanimado,918,0,0,28523,28523
+Animacidad,sin_MDO,animado,5,95,195,101,101
+Definitud,todas,Definido,976,0,0,6809,6740
+Definitud,todas,Indefinido,908,0,0,5747,5746
+Definitud,todas,Por determinar,121,0,79,,
+Definitud,con_MDO,Definido,644,0,0,243,242
+Definitud,con_MDO,Indefinido,286,0,0,70,70
+Definitud,con_MDO,Por determinar,77,23,123,,
+Definitud,sin_MDO,Definido,332,0,0,6566,6498
+Definitud,sin_MDO,Indefinido,622,0,0,5677,5676
+Definitud,sin_MDO,Por determinar,44,56,156,,

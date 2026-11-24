@@ -1,15 +1,15 @@
 """Construye las particiones 80/10/10 (train/dev/test) de la muestra anotada.
 
---version original    a partir de los dos Excel de dataset/raw/muestra (tareas MDO y Definitud). Las oraciones
+--version original    a partir de los dos Excel de dataset/raw/muestra. Las oraciones
                       repetidas (oraciones largas con varios objetos) se eliminan, porque tienen el mismo texto.
 --version segmentado  a partir de dataset/segmentacion/muestra/completo_<tag>.xlsx (salida de 00c), donde esas
-                      oraciones ya están segmentadas, un trozo por objeto (solo MDO). Se eliminan solo los
+                      oraciones ya están segmentadas, un trozo por objeto. Se eliminan solo los
                       duplicados exactos, los conflictos (misma oración, verbo y objeto con clases distintas) y las
                       filas que el revisor marcó como «no es CD» (inventario_revision.csv). La partición se agrupa
                       por oración original (ID), para que los trozos de una misma oración no queden en splits
                       distintos.
-Salida: dataset/processed/<versión>/<tarea>/{train,dev,test,eliminadas}.csv y
-        resultados/<versión>/<tarea>/estadisticas_dataset.csv
+Salida: dataset/processed/<versión>/mdo/{train,dev,test,eliminadas}.csv y
+        resultados/<versión>/mdo/estadisticas_dataset.csv
 Uso: python scripts/01_build_dataset.py --version original
      python scripts/01_build_dataset.py --version segmentado [--tag gemma_v3]
 """
@@ -59,19 +59,6 @@ def split_mdo(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
     train, temp = train_test_split(df, test_size=0.2, stratify=df["clase_mdo"], random_state=SEED)
     dev, test = train_test_split(temp, test_size=0.5, stratify=temp["clase_mdo"], random_state=SEED)
     return {"train": train, "dev": dev, "test": test}
-
-
-def dataset_definitud(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    m_dup = df.duplicated(subset=["Texto oración", "Verbo", "Objeto"], keep="first")
-    return df[~m_dup].reset_index(drop=True), df[m_dup].assign(motivo="duplicado exacto de oración, verbo y objeto")
-
-
-def split_definitud(df: pd.DataFrame) -> dict[str, pd.DataFrame]:
-    sgkf = StratifiedGroupKFold(n_splits=10, shuffle=True, random_state=SEED)
-    folds = list(sgkf.split(df, df["Definitud"], groups=df["Texto oración"]))
-    test_idx, dev_idx = folds[0][1], folds[1][1]
-    resto = df.index.difference(test_idx).difference(dev_idx)
-    return {"train": df.loc[resto], "dev": df.loc[dev_idx], "test": df.loc[test_idx]}
 
 
 # --- versión segmentada -----------------------------------------------------------------------------------------
@@ -159,7 +146,7 @@ def main():
         resultados.mkdir(parents=True, exist_ok=True)
         resumen.to_csv(resultados / "longitudes_tokens.csv", index=False)
         print(resumen.to_string(index=False))
-        tareas = [("mdo", dataset_mdo, split_mdo, "Texto oración"), ("definitud", dataset_definitud, split_definitud, "Texto oración")]
+        tareas = [("mdo", dataset_mdo, split_mdo, "Texto oración")]
     else:
         tareas = [("mdo", depurar_segmentado, split_segmentado, "ID")]
 

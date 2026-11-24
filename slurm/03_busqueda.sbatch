@@ -1,6 +1,6 @@
 #!/bin/bash
-# Búsqueda de hiperparámetros (03_busqueda.py) para los 10 pares (tarea, modelo) de common.PARES:
-#   0-4 = mdo × {mrbert_es, mrbert, mbert, beto_cased, beto_uncased}; 5-9 = definitud × (los mismos).
+# Búsqueda de hiperparámetros (03_busqueda.py) para los 5 modelos de common.PARES:
+#   0 = mrbert_es, 1 = mrbert, 2 = mbert, 3 = beto_cased, 4 = beto_uncased.
 # Uso: sbatch slurm/03_busqueda.sbatch        (o --array=3 para un solo par)
 #SBATCH --job-name=mdo_03
 #SBATCH --partition=gpu_a100,gpu_l40,standard
@@ -10,7 +10,7 @@
 #SBATCH --mem=32G
 #SBATCH --time=01:00:00
 #SBATCH --output=/lustre/romanistik/bonillaj/mdo/logs/03_%A_%a.log
-#SBATCH --array=0-9
+#SBATCH --array=0-4
 source /lustre/romanistik/bonillaj/mdo/MDO/slurm/env.sh
 nvidia-smi --query-gpu=name,memory.total --format=csv,noheader
 # Si la GPU del nodo está averiada, torch caería a CPU sin avisar: abortar.

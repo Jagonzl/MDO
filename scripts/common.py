@@ -1,8 +1,8 @@
 """Rutas, modelos, tareas y funciones comunes a todos los scripts.
 
 Hay dos versiones del dataset de entrenamiento; se elige con la variable de entorno MDO_VERSION:
-  original    (por defecto) muestra anotada sin las oraciones repetidas; tareas MDO y Definitud
-  segmentado  muestra con las oraciones de varios objetos segmentadas; solo MDO
+  original    (por defecto) muestra anotada sin las oraciones repetidas
+  segmentado  muestra con las oraciones de varios objetos segmentadas
 Cada versión lee de dataset/processed/<versión>, escribe en resultados/<versión> y guarda los modelos en
 <MDO_MODELOS>/<versión> (por defecto modelos/, que no se sube al repositorio).
 """
@@ -39,11 +39,10 @@ MODELOS = {
 
 TAREAS = {
     "mdo": {"columna": "clase_mdo", "clases": ["sin_MDO", "con_MDO"]},
-    "definitud": {"columna": "Definitud", "clases": ["Definido", "Indefinido", "Por determinar"]},
 }
 
-# Orden fijo de los 10 pares (tarea, modelo) para los arrays de SLURM:
-# 0-4 = mdo × (mrbert_es, mrbert, mbert, beto_cased, beto_uncased); 5-9 = definitud × los mismos.
+# Orden fijo de los 5 pares (tarea, modelo) para los arrays de SLURM:
+# 0 = mrbert_es, 1 = mrbert, 2 = mbert, 3 = beto_cased, 4 = beto_uncased.
 PARES = [(t, m) for t in TAREAS for m in MODELOS]
 
 

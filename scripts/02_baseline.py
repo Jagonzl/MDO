@@ -1,6 +1,6 @@
 """Líneas base: TF-IDF + regresión logística y, en MDO, la regla 'a/al delante del objeto'. No necesita GPU.
 
-Uso: python scripts/02_baseline.py --task mdo        (MDO_VERSION=segmentado para el dataset segmentado)
+Uso: python scripts/02_baseline.py        (MDO_VERSION=segmentado para el dataset segmentado)
 """
 import argparse
 import json
@@ -34,7 +34,7 @@ def informe(y_true, y_pred, clases):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--task", choices=TAREAS, required=True)
+    ap.add_argument("--task", choices=TAREAS, default="mdo")
     args = ap.parse_args()
     clases = TAREAS[args.task]["clases"]
     train, test = cargar_split(args.task, "train"), cargar_split(args.task, "test")

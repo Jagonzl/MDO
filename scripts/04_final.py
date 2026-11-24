@@ -51,7 +51,7 @@ def resumen(valores):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--task", choices=TAREAS)
+    ap.add_argument("--task", choices=TAREAS, default="mdo")
     ap.add_argument("--model", choices=MODELOS)
     ap.add_argument("--par", type=int, help="índice en PARES (sustituye a --task/--model)")
     ap.add_argument("--seeds", type=int, nargs="+", default=[42, 43, 44])
@@ -59,7 +59,7 @@ def main():
     if args.par is not None:
         args.task, args.model = PARES[args.par]
     if not (args.task and args.model):
-        ap.error("hace falta --task y --model, o --par")
+        ap.error("hace falta --model, o --par")
     print(f"== {args.task} / {args.model} | {entorno()}", flush=True)
 
     clases = TAREAS[args.task]["clases"]
